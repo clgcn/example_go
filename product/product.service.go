@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/charlesguo404/example_go/cors"
+	"golang.org/x/net/websocket"
 )
 
 const productsPath = "products"
@@ -117,6 +118,7 @@ func SetupRoutes(apiBasePath string) {
 	productsHanlder := http.HandlerFunc(handleProducts)
 	productHandler := http.HandlerFunc(handleProduct)
 
+	http.Handle("/websocket", websocket.Handler(productSocket))
 	http.Handle(fmt.Sprintf("%s/%s", apiBasePath, productsPath), cors.Middleware(productsHanlder))
 	http.Handle(fmt.Sprintf("%s/%s/", apiBasePath, productsPath), cors.Middleware(productHandler))
 }
