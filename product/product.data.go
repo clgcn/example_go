@@ -3,7 +3,9 @@ package product
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -177,4 +179,64 @@ func insertProduct(product Product) (int, error) {
 		return 0, err
 	}
 	return int(insertID), nil
+}
+
+func searchForProductData(productFilter ProductReportFilter) ([]Product, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var queryArgs = make([]interface{}, 0)
+	var queryBuilder strings.Builder
+	queryBuilder.WriteString(`SELECT 
+		productID,
+		LOWER(manufacturer),
+		LOWER(sku),
+		upc,
+		pricePerUnit,
+		quantityOnHand,
+		LOWER(productName)
+		FROM products WHERE `)
+
+	if productFilter.NameFilter != "" {
+		queryBuilder.WriteString(`productName LIKE ? `)
+		queryArgs = append(queryArgs, "%"+strings.ToLower(productFilter.NameFilter)+"%")
+	}
+
+	if productFilter.ManufacturerFilter != "" {
+		if len(queryArgs) > 0 {
+			queryBuilder.WriteString(" AND ")
+		}
+		queryBuilder.WriteString(`manufacturer LIKE ? `)
+		queryArgs = append(queryArgs, "%"+strings.ToLower(productFilter.ManufacturerFilter)+"%")
+	}
+
+	if productFilter.SKUFilter != "" {
+		if len(queryArgs) > 0 {
+			queryBuilder.WriteString(" AND ")
+		}
+		queryBuilder.WriteString(`sku LIKE ? `)
+		queryArgs = append(queryArgs, "%"+strings.ToLower(productFilter.SKUFilter)+"%")
+	}
+
+	fmt.Println(queryBuilder.String(), "\n", queryArgs)
+	result, err := database.DbConn.QueryContext(ctx, queryBuilder.String(), queryArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	products := make([]Product, 0)
+
+	for result.Next() {
+		var product Product
+		result.Scan(&product.ProductID,
+			&product.Manufacturer,
+			&product.Sku,
+			&product.Upc,
+			&product.PricePerUnit,
+			&product.QuantityOnHand,
+			&product.ProductName)
+		products = append(products, product)
+	}
+	return products, nil
 }
