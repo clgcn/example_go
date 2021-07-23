@@ -15,26 +15,30 @@ type message struct {
 
 func productSocket(ws *websocket.Conn) {
 	done := make(chan struct{})
+	fmt.Println("new websocket connection established")
 	go func(c *websocket.Conn) {
 		for {
 			var msg message
 			if err := websocket.JSON.Receive(ws, &msg); err != nil {
-				log.Fatal(err)
+				log.Println(err)
 				break
 			}
 			fmt.Printf("received message %s\n", msg.Data)
 		}
+		close(done)
 	}(ws)
-	close(done)
+
+loop:
 	for {
 		select {
 		case <-done:
 			fmt.Println("connection was closed, lets break out of here")
+			break loop
 		default:
+			fmt.Println("sending top 10 product list to the client")
 			products, err := GetTopTenProducts()
 			if err != nil {
 				log.Fatal(err)
-				break
 			}
 			if err := websocket.JSON.Send(ws, products); err != nil {
 				log.Println(err)
@@ -43,4 +47,6 @@ func productSocket(ws *websocket.Conn) {
 			time.Sleep(10 * time.Second)
 		}
 	}
+	fmt.Println("closing the websocket")
+	defer ws.Close()
 }
