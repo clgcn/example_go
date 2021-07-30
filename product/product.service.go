@@ -106,7 +106,10 @@ func handleProduct(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case http.MethodDelete:
-		removeProduct(productID)
+		err := removeProduct(productID)
+		if err != nil {
+			return
+		}
 	case http.MethodOptions:
 		return
 	default:
@@ -115,12 +118,12 @@ func handleProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetupRoutes(apiBasePath string) {
-	productsHanlder := http.HandlerFunc(handleProducts)
+	productsHandler := http.HandlerFunc(handleProducts)
 	productHandler := http.HandlerFunc(handleProduct)
 	reportHandler := http.HandlerFunc(handleProductReport)
 
 	http.Handle("/websocket", websocket.Handler(productSocket))
-	http.Handle(fmt.Sprintf("%s/%s", apiBasePath, productsPath), cors.Middleware(productsHanlder))
+	http.Handle(fmt.Sprintf("%s/%s", apiBasePath, productsPath), cors.Middleware(productsHandler))
 	http.Handle(fmt.Sprintf("%s/%s/", apiBasePath, productsPath), cors.Middleware(productHandler))
 	http.Handle(fmt.Sprintf("%s/%s/reports", apiBasePath, productsPath), cors.Middleware(reportHandler))
 
