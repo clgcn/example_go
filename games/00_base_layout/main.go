@@ -26,4 +26,6 @@ func main() {
 	if err := ebiten.RunGame(&Game{}); err != nil {
 		panic(err)
 	}
+
+# add some test
 }
